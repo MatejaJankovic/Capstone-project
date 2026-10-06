@@ -73,6 +73,7 @@ Svaki korisnik ima tačno jednu rolu. Svaki Employee ima tačno jednog RM-a (`ma
 | Nalozi | Kreira ih Admin, nema registracije | Interni enterprise alat |
 | JWT | Samo access token (8h) | Bez refresh tokena |
 | CI | Ne koristi se | Testovi se pokreću lokalno pre PR-a |
+| **PR review** | **Svaki PR odobrava 1 developer; feature PR dodatno odobrava QA** | Developer proverava kod i arhitekturu, a QA da funkcionalnost radi po specifikaciji |
 | QA alati | REST Assured + Playwright | API testovi u Javi, brz i moderan E2E |
 | Početna stranica | Jednostavna, po roli (kartice sa brojevima) | Brz pregled, bez grafikona |
 | Obaveštenja | Nema | Statusi se vide na listama i na početnoj stranici |
@@ -533,11 +534,27 @@ Rad je podeljen na vertikalne slice-ove: svaki developer radi i backend i fronte
 | **Dev 1: Platforma i korisnici** | Setup projekta (Spring Boot, Angular, Flyway), Docker (baza u prvoj nedelji, ceo stack u trećoj), Spring Security + JWT, **Swagger konfiguracija** (`OpenApiConfig`, Authorize), guardovi i interceptor, korisnici (kreiranje naloga, promena lozinke), departmenti, profil zaposlenog sa skillovima, admin stranice, **početna stranica** (`/api/dashboard` i *Home*). *Stretch:* upload dokumenata. |
 | **Dev 2: Projekti i matching** | Katalog skillova, projekti, staffing zahtevi (forma sa dinamičkim skillovima), **MatchingService**, stranica kandidata, pretraga zaposlenih, PM stranice. *Stretch:* timeline/heatmap. |
 | **Dev 3: Alokacije i kapacitet** | **CapacityService**, alokacije (predlog, odobravanje, odbijanje, otkazivanje), **tok izmene alokacije** (BR-15, BR-16), automatski status zahteva, RM stranice (*Pending approvals* sa *New*/*Change*), availability endpoint. *Stretch:* odsustva. |
-| **QA** | Test plan, matrica testova iz poslovnih pravila, unit testovi za `CapacityService` i `MatchingService`, integracioni testovi (Testcontainers), API automatizacija (REST Assured), E2E (Playwright), matrica ovlašćenja, istraživačko testiranje kroz Swagger, prijava bagova na Discord/Teams kanalu (ili kroz GitHub Issues, ako ih uvedete). |
+| **QA** | Test plan, matrica testova iz poslovnih pravila, unit testovi za `CapacityService` i `MatchingService`, integracioni testovi (Testcontainers), API automatizacija (REST Assured), E2E (Playwright), matrica ovlašćenja, istraživačko testiranje kroz Swagger, **testiranje i odobravanje feature PR-ova pre merge-a**, prijava bagova na Discord/Teams kanalu (ili kroz GitHub Issues, ako ih uvedete). |
 
 Svaki developer sam piše Swagger anotacije za svoje endpointe.
 
-**Git workflow:** `main` je uvek stabilan. Feature grane se zovu `feature/<kratak-opis>`. Svaki PR traži review bar jednog developera, a QA proverava pre merge-a gde je moguće. Dogovori i podela zadataka idu preko Discord/Teams kanala.
+### Git workflow i PR review
+
+`main` je uvek stabilan. Feature grane se zovu `feature/<kratak-opis>`. Dogovori i podela zadataka idu preko Discord/Teams kanala.
+
+| Vrsta PR-a | Ko odobrava | Šta proverava |
+|---|---|---|
+| **Svaki PR** | **1 developer (obavezno)** | Kod i arhitektura, poslovna pravila u servisu, DTO-i, validacija, Swagger anotacije |
+| **Feature PR** (nova funkcionalnost koju korisnik vidi) | **+ QA (drugo odobrenje)** | Pokreće granu lokalno, isproba je kroz Swagger i UI, proverava pravila iz matrice testova, validacije i poruke grešaka |
+| Tehnički PR (setup, konfiguracija, refaktor) | Samo developer | QA nije potreban |
+
+QA-ovo odobrenje znači **„testirano i radi po specifikaciji“**, a ne „kod je dobar“. Za kvalitet koda odgovara developer koji radi review.
+
+**Da QA ne bi kočio rad:**
+- QA pregleda feature PR **u roku od pola radnog dana** od otvaranja.
+- PR-ovi su mali: jedan endpoint ili jedan ekran, a ne nedelja rada.
+- Ako QA ne stigne u roku, PR se merge-uje sa odobrenjem developera, a QA ga testira naknadno na `main` i bagove prijavljuje na kanalu.
+- Autor PR-a u opisu navodi šta treba testirati i na koja pravila (BR-x) se PR odnosi.
 
 ---
 
@@ -549,7 +566,7 @@ Svaki developer sam piše Swagger anotacije za svoje endpointe.
 | Dev 1 | Kostur repoa i oba projekta, `docker-compose.yml` sa bazom, Flyway V1, auth/JWT end-to-end (login stranica), **Swagger sa Authorize dugmetom**, layout i guardovi |
 | Dev 2 | Katalog skillova, entiteti i CRUD za projekte i staffing zahteve (backend), PM lista projekata |
 | Dev 3 | Entiteti za alokacije, `CapacityService` sa unit testovima za osnovne slučajeve, availability endpoint |
-| QA | Test plan, test case-ovi iz BR-1…BR-16, setup REST Assured i Testcontainers projekta, upoznavanje API-ja kroz Swagger |
+| QA | Test plan, test case-ovi iz BR-1…BR-16, setup REST Assured, Testcontainers i Playwright projekta, test podaci za granične slučajeve, **unit testovi za `CapacityService` iz primera iz sekcije 7 pre implementacije**, API testovi prema dogovorenim DTO-ima, upoznavanje API-ja kroz Swagger, testiranje prvih feature PR-ova |
 
 **Cilj kraja nedelje:** login radi, korisnici, skillovi i projekti postoje u bazi i vide se u UI-ju, a svi endpointi se vide u Swagger-u.
 
@@ -559,7 +576,7 @@ Svaki developer sam piše Swagger anotacije za svoje endpointe.
 | Dev 1 | Profil i skillovi zaposlenog, admin stranice (kreiranje naloga), promena lozinke, **početna stranica po roli** |
 | Dev 2 | `MatchingService`, stranica kandidata, forma zahteva, pretraga zaposlenih |
 | Dev 3 | Tok predlog → odobravanje/odbijanje, **tok izmene alokacije**, BR-1…BR-16, RM stranice |
-| QA | API testovi za alokacije, izmene i ovlašćenja, unit testovi za capacity i matching, prvi bug reportovi |
+| QA | Testiranje i odobravanje feature PR-ova, API testovi za alokacije, izmene i ovlašćenja, unit testovi za capacity i matching, bug reportovi |
 
 **Cilj kraja nedelje:** ceo demo scenario iz sekcije 4 (uključujući izmenu u koraku 8) radi od početka do kraja.
 
@@ -585,7 +602,7 @@ Funkcionalnost je gotova kada:
 - [ ] je promena šeme urađena kroz novu Flyway migraciju
 - [ ] lokalno prolaze `mvn verify` i `ng build` / `ng test`
 - [ ] radi kroz `docker compose up --build`
-- [ ] je QA proverio glavni tok i pravila iz matrice testova koja se odnose na tu funkcionalnost
+- [ ] je za feature PR **QA testirao granu i odobrio PR**: glavni tok i pravila iz matrice testova koja se odnose na tu funkcionalnost. Ako je PR merge-ovan bez QA-a zbog roka, QA ga je testirao na `main`
 
 ---
 
@@ -597,6 +614,12 @@ Funkcionalnost je gotova kada:
 - **API:** REST Assured, svi endpointi, statusni kodovi i format grešaka. Swagger je referenca za zahteve i odgovore.
 - **E2E:** Playwright, glavni scenario po rolama.
 - **Ovlašćenja:** matrica rola × endpoint (200 / 403 / 401).
+
+### QA od prvog dana (shift-left)
+QA ne čeka da developeri završe, nego radi paralelno sa njima:
+- **Pre implementacije:** test case-ovi iz poslovnih pravila, test podaci i automatski testovi napisani prema specifikaciji. Primeri iz sekcija 7 i 8 su gotovi test case-ovi za `CapacityService` i `MatchingService`, a dogovoreni DTO-i su osnova za REST Assured testove. Ovi testovi „čekaju“ implementaciju i prolaze kad je posao gotov.
+- **Tokom implementacije:** testiranje i odobravanje feature PR-ova (vidi [Git workflow i PR review](#git-workflow-i-pr-review)).
+- **Posle merge-a:** regresija na `main` pre većih merge-ova i E2E testovi glavnog toka.
 
 ### Matrica testova (izvod)
 
@@ -686,5 +709,6 @@ Funkcionalnost je gotova kada:
 | Docker setup za ceo stack oduzme previše vremena | Baza je u Docker-u od prvog dana, a ceo stack se radi u trećoj nedelji. Rezervna opcija za demo je da se backend i frontend pokrenu lokalno |
 | Bez CI-ja se pokvari `main` | `mvn verify` i `ng build` lokalno pre svakog PR-a, obavezan review, regresija pre većih merge-ova |
 | Konflikt brojeva Flyway migracija | Broj migracije se rezerviše na kanalu, a lokalna baza se resetuje sa `docker compose down -v` |
+| QA postane usko grlo za PR-ove | Rok od pola radnog dana, mali PR-ovi; ako QA ne stigne, merge sa odobrenjem developera, pa QA testira na `main` |
 | Previše stretch funkcionalnosti | Feature freeze na kraju 3. dana treće nedelje, bez izuzetaka |
 | Merge konflikti u istim fajlovima | Paketi po feature-ima, mali i česti PR-ovi |
